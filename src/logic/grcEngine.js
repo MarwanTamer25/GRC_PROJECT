@@ -113,75 +113,284 @@ export async function generateReport(profile) {
 /**
  * Generate base risk scenarios based on profile
  */
+// Risk Scales Definitions
+const LIKELIHOOD_SCALE = {
+    1: "Rare",
+    2: "Unlikely",
+    3: "Possible",
+    4: "Likely",
+    5: "Almost Certain"
+};
+
+const CONSEQUENCE_SCALE = {
+    1: "Insignificant",
+    2: "Minor",
+    3: "Moderate",
+    4: "Major",
+    5: "Catastrophic",
+    6: "Doomsday"
+};
+
+function getRiskLevel(score) {
+    if (score >= 20) return "Extreme";
+    if (score >= 12) return "High";
+    if (score >= 6) return "Medium";
+    return "Low";
+}
+
 function generateBaseRisks(profile) {
-    const risks = [];
+    const pool = [];
+    let idCounter = 1;
 
+    // Helper to add risk to pool
+    const addToPool = (risk, likelihoodScore, consequenceScore, mitigation) => {
+        const score = likelihoodScore * consequenceScore;
+        pool.push({
+            id: `R${idCounter++}`, // Temporary ID, will re-index later if needed
+            risk,
+            likelihoodScore,
+            likelihoodLabel: LIKELIHOOD_SCALE[likelihoodScore],
+            consequenceScore,
+            consequenceLabel: CONSEQUENCE_SCALE[consequenceScore],
+            score, // Risk = Probability * Cost
+            level: getRiskLevel(score),
+            mitigation
+        });
+    };
+
+    // --- 1. PROFILE-BASED RISKS (Conditional) ---
+
+    // Remote Access
     if (profile.remote === 'yes') {
-        risks.push({
-            id: 'R1',
-            risk: "Remote Endpoint Compromise",
-            impact: "High",
-            likelihood: profile.mfa === 'mandatory' ? "Low" : "High",
-            level: profile.mfa === 'mandatory' ? "Medium" : "High",
-            mitigation: "Enforce Endpoint Encryption, VPN, and Mandatory MFA"
-        });
+        addToPool(
+            "Remote Endpoint Compromise",
+            profile.mfa === 'mandatory' ? 2 : 4, // Unlikely vs Likely
+            4, // Major
+            "Enforce Endpoint Encryption, VPN, and Mandatory MFA"
+        );
     }
 
+    // Cloud Configuration
     if (profile.hosting === 'cloud') {
-        risks.push({
-            id: 'R2',
-            risk: "Cloud Misconfiguration",
-            impact: "Critical",
-            likelihood: profile.cloudDataClassification === 'yes' ? "Low" : "Medium",
-            level: "High",
-            mitigation: "Enable Cloud Security Posture Management (CSPM), Regular Audits"
-        });
+        addToPool(
+            "Cloud Misconfiguration",
+            profile.cloudDataClassification === 'yes' ? 2 : 4, // Unlikely vs Likely
+            5, // Catastrophic
+            "Enable Cloud Security Posture Management (CSPM), Regular Audits"
+        );
     }
 
+    // Supply Chain
     if (profile.vendors === 'yes' || profile.criticalVendorCount > 0) {
-        risks.push({
-            id: 'R3',
-            risk: "Supply Chain / Third-Party Breach",
-            impact: "High",
-            likelihood: profile.vendorRiskAssessments === 'yes' ? "Low" : "High",
-            level: profile.vendorRiskAssessments === 'yes' ? "Medium" : "High",
-            mitigation: "Vendor Risk Assessment Program, Least Privilege Access, SLAs"
-        });
+        addToPool(
+            "Supply Chain / Third-Party Breach",
+            profile.vendorRiskAssessments === 'yes' ? 2 : 4,
+            4, // Major
+            "Vendor Risk Assessment Program, Least Privilege Access, SLAs"
+        );
     }
 
+    // Data Leakage
     if (profile.dataTypes.includes('pii') || profile.dataTypes.includes('financial') || profile.dataTypes.includes('health')) {
-        risks.push({
-            id: 'R4',
-            risk: "Data Breach / Leakage",
-            impact: "Critical",
-            likelihood: (profile.dataEncryptionAtRest === 'yes' && profile.dataEncryptionInTransit === 'yes') ? "Low" : "Medium",
-            level: "High",
-            mitigation: "Data Loss Prevention (DLP), Encryption at Rest/Transit, Access Logging"
-        });
+        addToPool(
+            "Data Breach / Leakage (Sensitive Data)",
+            (profile.dataEncryptionAtRest === 'yes' && profile.dataEncryptionInTransit === 'yes') ? 2 : 4,
+            5, // Catastrophic
+            "Data Loss Prevention (DLP), Encryption at Rest/Transit, Access Logging"
+        );
     }
 
+    // Ransomware
     if (profile.backupFrequency === 'none') {
-        risks.push({
-            id: 'R5',
-            risk: "Ransomware Attack with Data Loss",
-            impact: "Critical",
-            likelihood: "High",
-            level: "Critical",
-            mitigation: "Implement Backup Strategy, Offline Backups, Incident Response Plan"
-        });
+        addToPool(
+            "Ransomware Attack with Data Loss",
+            5, // Almost Certain (eventually)
+            6, // Doomsday (if no backups)
+            "Implement Backup Strategy, Offline Backups, Incident Response Plan"
+        );
+    } else {
+        addToPool(
+            "Ransomware Attack (Recoverable)",
+            3, // Possible
+            4, // Major (downtime vs data loss)
+            "Regular Backups, EDR, Incident Response Plan"
+        );
     }
 
-    // Always include insider threat
-    risks.push({
-        id: `R${risks.length + 1}`,
-        risk: "Insider Threat / Privilege Abuse",
-        impact: "Medium",
-        likelihood: profile.privilegedAccessManagement === 'yes' ? "Low" : "Medium",
-        level: "Medium",
-        mitigation: "Role-Based Access Control (RBAC), Privileged Access Management, Audit Logging"
-    });
+    // Weak Auth
+    if (profile.mfa !== 'mandatory') {
+        addToPool(
+            "Credential Stuffing / Brute Force",
+            5, // Almost Certain
+            4, // Major
+            "Mandatory MFA, Strong Password Policies, Account Lockout"
+        );
+    }
 
-    return risks;
+    // Log Failure
+    if (profile.logging !== 'advanced') {
+        addToPool(
+            "Failure to Detect Intrusions",
+            4, // Likely
+            4, // Major
+            "Centralized Logging, SIEM, Real-time Alerting"
+        );
+    }
+
+    // Compliance
+    if (profile.compliance === 'none' && (profile.dataTypes.includes('pii') || profile.industry === 'healthcare')) {
+        addToPool(
+            "Regulatory Non-Compliance Fines",
+            5, // Almost Certain
+            5, // Catastrophic
+            "Compliance Audits, Legal Counsel, Policy Management"
+        );
+    }
+
+    // --- 2. UNIVERSAL RISKS (Always in pool, selected by score) ---
+
+    addToPool(
+        "Insider Threat / Privilege Abuse",
+        profile.privilegedAccessManagement === 'yes' ? 2 : 3, // Unlikely/Possible
+        3, // Moderate
+        "RBAC, Privileged Access Management, Audit Logging"
+    );
+
+    addToPool(
+        "Social Engineering & Phishing Attacks",
+        4, // Likely
+        4, // Major
+        "Security Awareness Training, Phishing Simulations, Email Filtering"
+    );
+
+    addToPool(
+        "Exploitation of Unpatched Vulnerabilities",
+        3, // Possible
+        4, // Major
+        "Automated Patch Management, Regular Vulnerability Scanning"
+    );
+
+    addToPool(
+        "Unsanctioned Shadow IT Usage",
+        3, // Possible
+        2, // Minor
+        "Cloud Access Security Broker (CASB), Software Asset Management"
+    );
+
+    addToPool(
+        "Web Application Attacks (SQLi, XSS)",
+        3, // Possible
+        4, // Major
+        "Web Application Firewall (WAF), Secure Code Review, DAST/SAST"
+    );
+
+    addToPool(
+        "Denial of Service (DDoS) Attack",
+        2, // Unlikely
+        3, // Moderate
+        "DDoS Protection Services (e.g., Cloudflare), Redundancy"
+    );
+
+    addToPool(
+        "Mobile Device Compromise (BYOD)",
+        3, // Possible
+        3, // Moderate
+        "Mobile Device Management (MDM), Containerization, Remote Wipe"
+    );
+
+    addToPool(
+        "Insecure API Endpoints",
+        3, // Possible
+        4, // Major
+        "API Gateway, Rate Limiting, API Authentication"
+    );
+
+    addToPool(
+        "Data Integrity Corruption",
+        1, // Rare
+        5, // Catastrophic
+        "File Integrity Monitoring (FIM), Checksums, Backup Validation"
+    );
+
+    addToPool(
+        "Physical Security Breach",
+        2, // Unlikely
+        3, // Moderate
+        "Access Cards, CCTV, Visitor Management"
+    );
+
+    addToPool(
+        "Reputational Damage from Incident",
+        3, // Possible
+        5, // Catastrophic
+        "Crisis Communication Plan, PR Strategy"
+    );
+
+    addToPool(
+        "Theft of Intellectual Property",
+        2, // Unlikely
+        5, // Catastrophic
+        "DLP, Access Control, NDA, DRM"
+    );
+
+    addToPool(
+        "Business Interruption / Failure",
+        2, // Unlikely
+        6, // Doomsday
+        "Business Continuity Plan (BCP), Disaster Recovery (DR) Drills"
+    );
+
+    addToPool(
+        "Insecure Default Configurations",
+        3, // Possible
+        4, // Major
+        "Hardening Benchmarks (CIS), Automated Config Management"
+    );
+
+    addToPool(
+        "Network Eavesdropping / MitM",
+        profile.dataEncryptionInTransit === 'yes' ? 1 : 2, // Rare/Unlikely
+        3, // Moderate
+        "End-to-End Encryption, VPN, Mutual TLS"
+    );
+
+    addToPool(
+        "Inadequate Employee Offboarding",
+        3, // Possible
+        3, // Moderate
+        "Automated Account Deprovisioning, Exit Interviews"
+    );
+
+    addToPool(
+        "Data Leakage via AI/LLM Tools",
+        4, // Likely (Emerging threat)
+        4, // Major
+        "AI Usage Policy, Enterprise AI Gateways"
+    );
+
+    addToPool(
+        "Brand Impersonation on Social Media",
+        3, // Possible
+        2, // Minor
+        "Social Media Monitoring, Verified Profiles"
+    );
+
+    // --- FILTERING & SELECTION ---
+    // User Requirement: "origin at least 20" (Pool is ~26)
+    // "Average display between 10 to 15"
+    // Strategy: Sort by Score (Desc) and take top 12.
+
+    // Sort by Risk Score (Descending)
+    pool.sort((a, b) => b.score - a.score);
+
+    // Select Top 12 risks (fits "between 10 and 15")
+    const selectedRisks = pool.slice(0, 12);
+
+    // Re-assign IDs to be sequential 1-12 for the report
+    return selectedRisks.map((r, index) => ({
+        ...r,
+        id: index + 1 // Simple ID 1, 2, 3...
+    }));
 }
 
 /**

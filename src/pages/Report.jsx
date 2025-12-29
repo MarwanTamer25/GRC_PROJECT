@@ -491,7 +491,7 @@ const Report = ({ profile, onReset }) => {
                                     <tr style={{ background: 'rgba(255, 255, 255, 0.05)' }}>
                                         <th style={{ padding: '0.75rem', textAlign: 'left' }}>ID</th>
                                         <th style={{ padding: '0.75rem', textAlign: 'left' }}>Risk</th>
-                                        <th style={{ padding: '0.75rem', textAlign: 'center' }}>Impact</th>
+                                        <th style={{ padding: '0.75rem', textAlign: 'center' }}>Consequence</th>
                                         <th style={{ padding: '0.75rem', textAlign: 'center' }}>Likelihood</th>
                                         <th style={{ padding: '0.75rem', textAlign: 'center' }}>Level</th>
                                         <th style={{ padding: '0.75rem', textAlign: 'left' }}>Mitigation</th>
@@ -503,13 +503,23 @@ const Report = ({ profile, onReset }) => {
                                             <td style={{ padding: '0.75rem' }}>{r.id}</td>
                                             <td style={{ padding: '0.75rem' }}>{r.risk}</td>
                                             <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                                                <span className="badge" style={{ background: r.impact === 'Critical' ? '#ef4444' : r.impact === 'High' ? '#f97316' : '#eab308' }}>
-                                                    {r.impact}
-                                                </span>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                    <span className="badge" style={{ background: r.consequenceScore >= 5 ? '#ef4444' : r.consequenceScore >= 3 ? '#f97316' : '#eab308' }}>
+                                                        {r.consequenceLabel}
+                                                    </span>
+                                                </div>
                                             </td>
-                                            <td style={{ padding: '0.75rem', textAlign: 'center' }}>{r.likelihood}</td>
                                             <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                                                <span className="badge" style={{ background: r.level === 'Critical' ? '#ef4444' : r.level === 'High' ? '#f97316' : '#eab308' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                                    <span>{r.likelihoodLabel}</span>
+                                                </div>
+                                            </td>
+                                            <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                                                <span className="badge" style={{
+                                                    background: r.level === 'Extreme' ? '#ef4444' :
+                                                        r.level === 'High' ? '#f97316' :
+                                                            r.level === 'Medium' ? '#eab308' : '#22c55e'
+                                                }}>
                                                     {r.level}
                                                 </span>
                                             </td>
