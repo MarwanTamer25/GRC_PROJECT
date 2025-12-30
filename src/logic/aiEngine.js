@@ -64,54 +64,29 @@ async function callOllama(prompt, options = {}) {
  * @returns {Promise<string>} - AI-generated executive summary
  */
 export async function generateExecutiveSummary(profile, maturityScore) {
-    const prompt = `You are a virtual CISO consultant. Analyze this company profile and generate an executive summary for their GRC assessment report.
+    const prompt = `You are an elite Virtual CISO consulting for a client. Your job is to output a Board-Level Executive Summary of their security posture.
 
-COMPANY PROFILE:
+CLIENT PROFILE:
 - Name: ${profile.name}
-- Industry: ${profile.industry}
-- Size: ${profile.employees} employees
-- Region: ${profile.region}
-- Business Model: ${profile.model}
+- Industry: ${profile.industry} (${profile.employees} employees, ${profile.region})
+- Operations: ${profile.model} model, Cloud: ${profile.hosting}
+- Key Assets: ${profile.dataTypes.join(', ') || 'Standard Business Data'}
+- Security Budget: $${profile.securityBudget}/year
 
-TECHNOLOGY STACK:
-- Hosting: ${profile.hosting} (${profile.cloudProvider || 'N/A'})
-- Applications: ${profile.applicationCount} systems, ${profile.webApplications} web apps
-- Database: ${profile.primaryDatabase} (${profile.databaseCount} databases)
-- Data Types: ${profile.dataTypes.join(', ') || 'None specified'}
+SECURITY POSTURE SNAPSHOT:
+- Maturity Score: ${maturityScore.overall}% (Industry Avg: ~65%)
+- Critical Gaps: ${profile.mfa !== 'mandatory' ? 'Lack of Mandatory MFA' : ''}, ${profile.backupFrequency === 'none' ? 'No Offline Backups' : ''}, ${profile.vulnerabilityScanning === 'never' ? 'No Vuln Scanning' : ''}
+- Compliance Needs: ${profile.regulatoryRequirements?.join(', ') || 'Standard Data Protection'}
 
-SECURITY POSTURE:
-- Security Maturity Score: ${maturityScore.overall}%
-- MFA: ${profile.mfa}
-- EDR/Antivirus: ${profile.antivirusDeployed === 'yes' ? profile.edrSolution : 'Not deployed'}
-- Vulnerability Scanning: ${profile.vulnerabilityScanning}
-- Patching: ${profile.patchingFrequency}
-- Security Team: ${profile.securityTeamSize} FTE, Budget: $${profile.securityBudget}/year
-- CISO: ${profile.cisoPresent}
-- Security Training: ${profile.securityTrainingFrequency}
-- Incidents Last Year: ${profile.securityIncidentsLastYear}
-- Data Breach History: ${profile.dataBreachHistory}
+INSTRUCTIONS:
+Write a **Strategic Executive Summary** (3-4 paragraphs) addressed to the Board of Directors.
+1.  **Strategic Outlook**: Open with a high-level assessment of their risk posture relative to the ${profile.industry} industry threats.
+2.  **Critical Risk Exposure**: Explicitly mention the top 1-2 existential risks (e.g., Ransomware due to no backups, Data Breach due to weak auth). Use financial risk language.
+3.  **Forward-Looking Strategy**: Briefly justify the need for immediate investment in the top recommendations to protect revenue and reputation.
 
-COMPLIANCE STATUS:
-- Existing Certifications: ${profile.existingCertifications?.join(', ') || 'None'}
-- Regulatory Requirements: ${profile.regulatoryRequirements?.join(', ') || 'None'}
-- Policies Documented: ${profile.policiesDocumented}
-- Risk Tolerance: ${profile.riskTolerance}
-- Audit Ready: ${profile.auditReady}
+TONE: Professional, Authoritative, Concise, Business-Aligned. Avoid generic fluff. Use strong verbs.`;
 
-BUSINESS CONTINUITY:
-- BCP Documented: ${profile.bcpDocumented}
-- RTO: ${profile.rto} hours, RPO: ${profile.rpo} hours
-- Redundancy: ${profile.redundancyLevel}
-
-Generate a professional, board-ready executive summary with 3-4 paragraphs covering:
-1. Current security posture overview (strengths and critical gaps)
-2. Regulatory compliance status and obligations specific to their industry
-3. Overall risk assessment and business impact
-4. Top 3 priority recommendations with urgency level
-
-Use specific numbers and percentages. Be direct and actionable. Write in a professional consulting tone.`;
-
-    return await callOllama(prompt, { temperature: 0.7, max_tokens: 1500 });
+    return await callOllama(prompt, { temperature: 0.6, max_tokens: 1000 });
 }
 
 /**
@@ -124,64 +99,45 @@ Use specific numbers and percentages. Be direct and actionable. Write in a profe
 export async function generateRecommendations(profile, gaps, maturityScore) {
     const gapsSummary = gaps.map(g => `- ${g.category}: ${g.description} (Severity: ${g.severity})`).join('\n');
 
-    const prompt = `You are a GRC consultant creating actionable security recommendations. Generate recommendations in valid JSON format.
+    const prompt = `You are a Technical Security Architect. Generate 15 precise, actionable recommendations for this client.
 
-COMPANY CONTEXT:
-- Industry: ${profile.industry}
-- Size: ${profile.employees} employees
-- Security Budget: $${profile.securityBudget}/year
-- Security Team: ${profile.securityTeamSize} FTE
-- Risk Tolerance: ${profile.riskTolerance}
-- Current Maturity: ${maturityScore.overall}%
+CLIENT: ${profile.name} (${profile.industry}, ${profile.employees} employees)
+BUDGET: $${profile.securityBudget}/year
+MATURITY: ${maturityScore.overall}%
 
-IDENTIFIED GAPS:
+IDENTIFIED GAPS & RISKS:
 ${gapsSummary}
 
-ADDITIONAL CONTEXT:
-- No MFA: ${profile.mfa === 'none' || profile.mfa === 'optional' ? 'YES - CRITICAL' : 'No'}
-- No SIEM: ${profile.siemDeployed === 'no' ? 'YES' : 'No'}
-- No Vulnerability Scanning: ${profile.vulnerabilityScanning === 'never' ? 'YES - CRITICAL' : 'No'}
-- No Incident Response Plan: ${profile.incidentResponsePlan === 'no' ? 'YES - CRITICAL' : 'No'}
-- No Security Training: ${profile.securityTrainingFrequency === 'never' ? 'YES' : 'No'}
-- No Backups: ${profile.backupFrequency === 'none' ? 'YES - CRITICAL' : 'No'}
+CRITICAL INSTRUCTIONS:
+For EACH recommendation, you MUST provide precise technical details.
+- Avoid generic advice like "Implement a tool."
+- Instead, say "Deploy CrowdStrike Falcon or SentinelOne" or "Configure AWS CloudTrail with log validation."
+- Provide a "Technical Configuration" step (e.g., "Run 'npm audit' in CI/CD").
 
-Generate 15 prioritized recommendations. For EACH recommendation, provide:
-- id: Sequential number (1-15)
-- title: Action-oriented title (max 80 chars)
-- category: One of: "Access Control", "Risk Management", "Compliance", "Governance"
-- priority: One of: "Critical", "High", "Medium", "Low"
-- businessImpact: 1-2 sentences explaining what happens if NOT implemented
-- steps: Array of 3-5 specific implementation steps with timelines
-- estimatedCost: Object with min and max (numbers, USD)
-- timeline: String like "4-6 weeks" or "2-3 months"
-- resources: Object with "people" and "tools" strings
-- successMetrics: Array of 2-3 measurable success criteria
-- quickWins: Array of 1-2 immediate actions (can be empty array)
-
-CRITICAL: Return ONLY valid JSON in this exact format:
+OUTPUT FORMAT (JSON ONLY):
 {
   "recommendations": [
     {
-      "id": 1,
-      "title": "string",
-      "category": "string",
-      "priority": "string",
-      "businessImpact": "string",
-      "steps": ["string", "string"],
+      "id": number,
+      "title": "Action-Oriented Title",
+      "category": "Management" | "Operational" | "Technical",
+      "priority": "Critical" | "High" | "Medium" | "Low",
+      "businessImpact": "One sentence on WHY this matters financially/operationally.",
+      "steps": ["Step 1: Specific action...", "Step 2: Config/Install...", "Step 3: Validation..."],
       "estimatedCost": {"min": number, "max": number},
-      "timeline": "string",
-      "resources": {"people": "string", "tools": "string"},
-      "successMetrics": ["string", "string"],
-      "quickWins": ["string"]
+      "timeline": "e.g., 2 weeks",
+      "resources": {"people": "Roles needed", "tools": "Specific tools/licenses"},
+      "successMetrics": ["Metric 1", "Metric 2"],
+      "quickWins": ["Immediate action 1"]
     }
   ]
 }
 
-Prioritize Critical items first, then High, Medium, Low. Focus on highest ROI and quickest risk reduction for a ${profile.industry} company with ${profile.employees} employees.`;
+Prioritize the Critical gaps first. Ensure the "steps" are technical and granular.`;
 
     try {
         const response = await callOllama(prompt, {
-            temperature: 0.5,
+            temperature: 0.4,
             max_tokens: 6000
         });
 
@@ -249,47 +205,45 @@ Format as clear markdown with headers, lists, and tables where appropriate.`;
 export async function quantifyRisks(profile, risks) {
     const risksDescription = risks.map(r => `- ${r.risk}: ${r.impact} impact, ${r.likelihood} likelihood`).join('\n');
 
-    const prompt = `You are a risk quantification analyst. Calculate Annual Loss Expectancy (ALE) for each risk.
+    const prompt = `You are a Quantitative Risk Analyst (OpenFAIR methodology). Calculate financial risk exposure.
 
-COMPANY DATA:
+CONTEXT:
+- Company Size: ${profile.employees} employees
+- Est. Revenue: $${(profile.employees * 200000).toLocaleString()} (approx)
 - Industry: ${profile.industry}
-- Revenue Estimate: ~$${profile.employees * 150000} (based on ${profile.employees} employees)
-- Employee Count: ${profile.employees}
-- Data Volume: ${profile.dataVolume}
-- Industry: ${profile.industry}
+- Data Sensitivity: ${profile.dataTypes.join(', ')}
 
-RISK SCENARIOS:
+RISK SCENARIOS TO QUANTIFY:
 ${risksDescription}
 
-For EACH risk, calculate:
-1. Single Loss Expectancy (SLE) - estimated cost if it happens once (in USD)
-2. Annual Rate of Occurrence (ARO) - probability as decimal (0.01 to 1.0)
-3. Annual Loss Expectancy (ALE = SLE × ARO)
-4. Mitigation Cost - estimated cost to implement controls
-5. ROI - return on investment percentage
+INSTRUCTIONS:
+Estimate reasonable financial loss values (ALE) for EACH risk.
+- **SLE (Single Loss Expectancy)**: Total cost of one event (Response + Downtime + Fines + Reputation).
+- **ARO (Annual Rate of Occurrence)**: Probability of event per year (e.g., 0.1 for once in 10 years, 1.0 for once a year).
+- **ALE**: SLE * ARO.
+- **ROI**: ((ALE - MitigationCost) / MitigationCost) * 100.
 
-Use industry benchmarks:
-- Data breach cost: $4.45M average (healthcare), $3.9M (financial), $2.5M (other)
-- Ransomware: $1.85M average recovery cost
-- Downtime: $5,600/minute for critical systems
+BENCHMARKS (Guide only):
+- Ransomware: $500k - $2M range for mid-size.
+- Data Breach: $150 per record.
+- DDoS: $10k - $50k per hour downtime.
 
-Return as JSON array:
+OUTPUT FORMAT (JSON ONLY):
 [
   {
-    "risk": "Risk name",
-    "sle": number,
-    "aro": number,
-    "ale": number,
-    "mitigationCost": number,
-    "roi": number
+    "risk": "Exact Risk Name from list",
+    "sle": number (USD),
+    "aro": number (0.01 - 3.0),
+    "ale": number (USD),
+    "mitigationCost": number (USD),
+    "roi": number (percentage)
   }
 ]
-
-Be realistic for a ${profile.employees}-employee ${profile.industry} company.`;
+`;
 
     try {
         const response = await callOllama(prompt, {
-            temperature: 0.4,
+            temperature: 0.3, // Lower temperature for math/logic consistency
             max_tokens: 2000
         });
         return JSON.parse(response);

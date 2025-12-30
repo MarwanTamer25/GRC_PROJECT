@@ -254,6 +254,187 @@ const MetricBar = ({ label, score }) => {
     );
 };
 
+// Methodology Section Component
+const MethodologySection = ({ methodology }) => {
+    if (!methodology) return null;
+    return (
+        <div className="box" style={{ marginBottom: '2rem' }}>
+            <h2>📘 Methodology & Framework</h2>
+            <div style={{ padding: '1.5rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '8px' }}>
+
+                {/* Executive Summary of Methodology */}
+                <div style={{ marginBottom: '2rem' }}>
+                    <h3 style={{ color: 'var(--accent-primary)', fontSize: '1.2rem' }}>Overview</h3>
+                    <p style={{ lineHeight: 1.7, color: 'var(--text-secondary)' }}>
+                        {methodology.executiveSummary}
+                    </p>
+                </div>
+
+                {/* PDCA and Principles Grid */}
+                <div className="grid-2" style={{ gap: '2rem' }}>
+
+                    {/* PDCA Model */}
+                    <div className="glass-card">
+                        <h4 style={{ marginTop: 0 }}>🔄 The {methodology.framework} Model</h4>
+                        <ul style={{ paddingLeft: '1.5rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                            <li><strong>Plan:</strong> Establish policy, objectives, processes and procedures relevant to managing risk and improving information security to deliver results in accordance with an organization’s overall policies and objectives.</li>
+                            <li><strong>Do:</strong> Implement and operate the Information Security Management System (ISMS) policy, controls, processes, and procedures.</li>
+                            <li><strong>Check:</strong> Assess and, where applicable, measure process performance against ISMS policy, objectives, and practical experience and report the results to management for review.</li>
+                            <li><strong>Act:</strong> Take corrective and preventive actions, based on the results of the internal ISMS audit and management review or other relevant information, to continually improve the ISMS.</li>
+                        </ul>
+                    </div>
+
+                    {/* Core Principles */}
+                    <div className="glass-card">
+                        <h4 style={{ marginTop: 0 }}>🛡️ Core Principles (C.I.A.)</h4>
+                        <div style={{ display: 'grid', gap: '1rem' }}>
+                            {methodology.principles.map((p, i) => (
+                                <div key={i} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                                    <div style={{
+                                        background: 'rgba(56, 189, 248, 0.1)',
+                                        color: 'var(--accent-primary)',
+                                        padding: '0.25rem 0.5rem',
+                                        borderRadius: '4px',
+                                        fontSize: '0.8rem',
+                                        fontWeight: 'bold',
+                                        minWidth: '100px',
+                                        textAlign: 'center'
+                                    }}>
+                                        {p.term}
+                                    </div>
+                                    <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{p.desc}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Control Categories */}
+                <div style={{ marginTop: '2rem' }}>
+                    <h4 style={{ marginBottom: '1rem' }}>Security Control Categories</h4>
+                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                        {methodology.controls.map((c, i) => (
+                            <span key={i} className="badge badge-outline" style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
+                                {c}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// 5x6 Risk Matrix Component
+const RiskMatrix = ({ risks }) => {
+    if (!risks) return null;
+
+    // Grid Dimensions
+    const likelihoods = [5, 4, 3, 2, 1]; // Rows (Rare at bottom usually, but standard matrix often has Rare at bottom. Let's do 5 at top)
+    // Actually, standard ISO matrix: Likelihood Y-axis (Low to High), Consequence X-axis (Low to High).
+    // Let's render Y-axis top-down: 5 (Almost Certain) -> 1 (Rare) 
+    const consequences = [1, 2, 3, 4, 5, 6]; // Cols: Insignificant -> Doomsday
+
+    // Map risks to cells
+    const riskMap = {};
+    risks.forEach(r => {
+        const key = `${r.likelihoodScore}-${r.consequenceScore}`;
+        if (!riskMap[key]) riskMap[key] = [];
+        riskMap[key].push(r.id);
+    });
+
+    const getCellColor = (l, c) => {
+        const score = l * c;
+        if (score >= 25) return '#ef4444'; // Extreme
+        if (score >= 15) return '#f97316'; // High
+        if (score >= 6) return '#eab308'; // Medium
+        return '#22c55e'; // Low
+    };
+
+    return (
+        <div className="box" style={{ marginBottom: '2rem' }}>
+            <h2>📊 Detailed Risk Assessment Matrix</h2>
+            <div className="glass-card" style={{ padding: '1.5rem', overflowX: 'auto' }}>
+                <div style={{ display: 'flex' }}>
+
+                    {/* Y-Axis Label */}
+                    <div style={{
+                        writingMode: 'vertical-rl',
+                        transform: 'rotate(180deg)',
+                        textAlign: 'center',
+                        fontWeight: 'bold',
+                        padding: '1rem',
+                        borderRight: '1px solid rgba(255,255,255,0.1)',
+                        marginRight: '1rem'
+                    }}>
+                        LIKELIHOOD
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '4px', marginBottom: '1rem' }}>
+                            {/* Header Row */}
+                            {['Insig.', 'Minor', 'Mod.', 'Major', 'Catast.', 'Doomsday'].map((label, i) => (
+                                <div key={i} style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)', paddingBottom: '0.5rem' }}>
+                                    {label} ({i + 1})
+                                </div>
+                            ))}
+
+                            {/* Grid Cells */}
+                            {likelihoods.map(l => (
+                                <React.Fragment key={l}>
+                                    {consequences.map(c => {
+                                        const ids = riskMap[`${l}-${c}`] || [];
+                                        return (
+                                            <div key={`${l}-${c}`} style={{
+                                                aspectRatio: '1',
+                                                background: getCellColor(l, c),
+                                                opacity: 0.8,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                borderRadius: '4px',
+                                                position: 'relative',
+                                                fontSize: '0.8rem',
+                                                flexWrap: 'wrap',
+                                                gap: '2px',
+                                                padding: '4px'
+                                            }} title={`Likelihood: ${l}, Consequence: ${c}`}>
+                                                {ids.length > 0 ? (
+                                                    ids.slice(0, 3).map(id => (
+                                                        <span key={id} style={{
+                                                            background: 'rgba(0,0,0,0.3)',
+                                                            color: '#fff',
+                                                            padding: '2px 6px',
+                                                            borderRadius: '99px',
+                                                            fontSize: '0.7rem'
+                                                        }}>
+                                                            R{id}
+                                                        </span>
+                                                    ))
+                                                ) : <span style={{ opacity: 0.3 }}>.</span>}
+                                                {ids.length > 3 && <span style={{ fontSize: '0.7rem' }}>+</span>}
+                                            </div>
+                                        );
+                                    })}
+                                </React.Fragment>
+                            ))}
+                        </div>
+                        {/* X-Axis Label */}
+                        <div style={{ textAlign: 'center', fontWeight: 'bold', paddingTop: '0.5rem' }}>CONSEQUENCE</div>
+                    </div>
+                </div>
+
+                <div style={{ marginTop: '1.5rem', fontSize: '0.9rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                    <span style={{ display: 'inline-block', width: '12px', height: '12px', background: '#ef4444', marginRight: '5px' }}></span> Extreme (25-30) &nbsp;
+                    <span style={{ display: 'inline-block', width: '12px', height: '12px', background: '#f97316', marginRight: '5px' }}></span> High (15-24) &nbsp;
+                    <span style={{ display: 'inline-block', width: '12px', height: '12px', background: '#eab308', marginRight: '5px' }}></span> Medium (6-14) &nbsp;
+                    <span style={{ display: 'inline-block', width: '12px', height: '12px', background: '#22c55e', marginRight: '5px' }}></span> Low (1-5)
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // Main Report Component
 const Report = ({ profile, onReset }) => {
     const [loading, setLoading] = useState(true);
@@ -341,7 +522,7 @@ const Report = ({ profile, onReset }) => {
             <div className="report-body">
                 {/* EXECUTIVE SUMMARY (AI-GENERATED) */}
                 <section className="box" style={{ marginBottom: '2rem' }}>
-                    <h2>📘 Executive Summary</h2>
+                    <h2>📘 Executive Summary (Strategic Analysis)</h2>
                     <div style={{
                         padding: '1.5rem',
                         background: 'rgba(52, 211, 153, 0.05)',
@@ -353,6 +534,12 @@ const Report = ({ profile, onReset }) => {
                         {data.executiveSummary || 'Executive summary not available.'}
                     </div>
                 </section>
+
+                {/* METHODOLOGY SECTION */}
+                <MethodologySection methodology={data.methodology} />
+
+                {/* RISK MATRIX */}
+                <RiskMatrix risks={data.risks} />
 
                 {/* MATURITY SCORE */}
                 <section className="box" style={{ marginBottom: '2rem' }}>
@@ -401,12 +588,27 @@ const Report = ({ profile, onReset }) => {
                     </section>
                 )}
 
+                {/* RISK QUANTIFICATION */}
+                {data.quantifiedRisks && data.quantifiedRisks.length > 0 && (
+                    <section className="box" style={{ marginBottom: '2rem' }}>
+                        <h2>💰 Financial Risk Quantification</h2>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                            Annual Loss Expectancy (ALE) calculated for identified risk scenarios.
+                        </p>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginBottom: '1rem' }}>
+                            <strong>Definitions:</strong> SLE = Single Loss Expectancy | ARO = Annual Rate of Occurrence |
+                            ALE = SLE × ARO (Annual Loss Expectancy) | ROI = Return on Investment for mitigation
+                        </div>
+                        <RiskTable risks={data.quantifiedRisks} />
+                    </section>
+                )}
+
                 {/* AI-GENERATED RECOMMENDATIONS */}
                 {data.recommendations && data.recommendations.length > 0 && (
                     <section className="box" style={{ marginBottom: '2rem' }}>
                         <h2>🎯 Prioritized Recommendations ({data.recommendations.length} items)</h2>
                         <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-                            AI-generated actionable recommendations with implementation details, costs, and timelines.
+                            AI-generated actionable recommendations classified by control type (Management, Operational, Technical).
                         </p>
                         {data.recommendations.map((rec, i) => (
                             <RecommendationCard key={i} rec={rec} index={i} />
@@ -427,21 +629,6 @@ const Report = ({ profile, onReset }) => {
                         }}>
                             {data.complianceRoadmap}
                         </div>
-                    </section>
-                )}
-
-                {/* RISK QUANTIFICATION */}
-                {data.quantifiedRisks && data.quantifiedRisks.length > 0 && (
-                    <section className="box" style={{ marginBottom: '2rem' }}>
-                        <h2>💰 Financial Risk Quantification</h2>
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                            Annual Loss Expectancy (ALE) calculated for identified risk scenarios.
-                        </p>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginBottom: '1rem' }}>
-                            <strong>Definitions:</strong> SLE = Single Loss Expectancy | ARO = Annual Rate of Occurrence |
-                            ALE = SLE × ARO (Annual Loss Expectancy) | ROI = Return on Investment for mitigation
-                        </div>
-                        <RiskTable risks={data.quantifiedRisks} />
                     </section>
                 )}
 
@@ -484,7 +671,7 @@ const Report = ({ profile, onReset }) => {
                 {/* TRADITIONAL RISK REGISTER */}
                 {data.risks && data.risks.length > 0 && (
                     <section className="box" style={{ marginBottom: '2rem' }}>
-                        <h2>⚠️ Risk Register</h2>
+                        <h2>⚠️ Risk Register (Top {data.risks.length})</h2>
                         <div style={{ overflowX: 'auto' }}>
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
@@ -500,7 +687,7 @@ const Report = ({ profile, onReset }) => {
                                 <tbody>
                                     {data.risks.map(r => (
                                         <tr key={r.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                                            <td style={{ padding: '0.75rem' }}>{r.id}</td>
+                                            <td style={{ padding: '0.75rem' }}>R{r.id}</td>
                                             <td style={{ padding: '0.75rem' }}>{r.risk}</td>
                                             <td style={{ padding: '0.75rem', textAlign: 'center' }}>
                                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>

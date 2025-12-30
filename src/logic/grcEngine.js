@@ -101,6 +101,9 @@ export async function generateReport(profile) {
         risks: baseRisks,             // Risk scenarios
         quantifiedRisks,              // Financial impact (ALE)
 
+        // Local Methodology Data (Static)
+        methodology: generateMethodologyOverview(),
+
         // Supporting Data (kept from original)
         governance: generateGovernanceSection(profile),
         access: generateAccessSection(profile),
@@ -132,10 +135,29 @@ const CONSEQUENCE_SCALE = {
 };
 
 function getRiskLevel(score) {
-    if (score >= 20) return "Extreme";
-    if (score >= 12) return "High";
-    if (score >= 6) return "Medium";
+    if (score >= 25) return "Extreme"; // 5x5=25, 5x6=30
+    if (score >= 15) return "High";    // 3x5=15, 4x4=16
+    if (score >= 6) return "Medium";   // 2x3=6, 3x2=6
     return "Low";
+}
+
+/**
+ * Generate methodology overview based on ISO/PDCA
+ */
+function generateMethodologyOverview() {
+    return {
+        title: "IT Security Management & Risk Assessment Methodology",
+        executiveSummary: "Effective IT security management is a formal, iterative process designed to protect an organization's critical assets in a cost-effective manner. It revolves around a continuous cycle of planning, implementation, monitoring, and improvement, often encapsulated in the Plan-Do-Check-Act (PDCA) model.",
+        principles: [
+            { term: "Confidentiality", desc: "Ensuring information is accessible only to those authorized to have access." },
+            { term: "Integrity", desc: "Safeguarding the accuracy and completeness of information and processing methods." },
+            { term: "Availability", desc: "Ensuring that authorized users have access to information and associated assets when required." },
+            { term: "Auditing", desc: "Reviewing system records to establish accountability and verify compliance." }
+        ],
+        framework: "Plan-Do-Check-Act (PDCA)",
+        riskApproach: "Combined Approach (Baseline + Detailed Analysis)",
+        controls: ["Management Controls", "Operational Controls", "Technical Controls"]
+    };
 }
 
 function generateBaseRisks(profile) {

@@ -10,7 +10,7 @@
   --success: #34d399;
   --warning: #fbbf24;
   --danger: #f87171;
-  
+
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -24,7 +24,7 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
-  background-image: 
+  background-image:
     radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.1) 0%, transparent 40%),
     radial-gradient(circle at 90% 80%, rgba(129, 140, 248, 0.1) 0%, transparent 40%);
 }
@@ -123,8 +123,20 @@ body {
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
 }
-.badge-success { background: rgba(52, 211, 153, 0.2); color: var(--success); }
-.badge-warning { background: rgba(251, 191, 36, 0.2); color: var(--warning); }
-.badge-danger { background: rgba(248, 113, 113, 0.2); color: var(--danger); }
+
+.badge-success {
+  background: rgba(52, 211, 153, 0.2);
+  color: var(--success);
+}
+
+.badge-warning {
+  background: rgba(251, 191, 36, 0.2);
+  color: var(--warning);
+}
+
+.badge-danger {
+  background: rgba(248, 113, 113, 0.2);
+  color: var(--danger);
+}
