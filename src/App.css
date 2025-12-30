@@ -438,3 +438,143 @@ body {
     animation: logo-spin infinite 20s linear;
   }
 }
+
+/* --- Report Specific Styles --- */
+.report-header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 3rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.report-title {
+  margin: 0;
+  font-size: 2.2rem;
+  background: linear-gradient(to right, #fff, #9ca3af);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.score-header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  padding: 1.5rem 2rem;
+  border-left-width: 6px;
+  border-left-style: solid;
+}
+
+.score-display {
+  text-align: center;
+}
+
+.score-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.recommendation-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.recommendation-card {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  border-top-width: 4px;
+  border-top-style: solid;
+}
+
+.risk-table-container {
+  overflow-x: auto;
+  padding: 0;
+}
+
+.risk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.risk-table th {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  padding: 15px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.risk-table td {
+  padding: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* --- Print Optimization --- */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    background-image: none !important;
+  }
+
+  .navbar,
+  .btn,
+  .no-print,
+  .badge-outline,
+  .hero-section::after {
+    display: none !important;
+  }
+
+  .container {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .glass-card {
+    background: none !important;
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    color: #000 !important;
+    break-inside: avoid;
+    margin-bottom: 2rem !important;
+    border-radius: 4px !important;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  strong {
+    color: #000 !important;
+  }
+
+  .report-header {
+    border-bottom: 2px solid #000 !important;
+    margin-bottom: 2rem !important;
+  }
+
+  /* Force table layouts for print */
+  table {
+    border: 1px solid #ccc !important;
+  }
+
+  th,
+  td {
+    border: 1px solid #ccc !important;
+    color: #000 !important;
+  }
+
+  /* Ensure text wrapping */
+  pre,
+  code {
+    white-space: pre-wrap !important;
+  }
+}

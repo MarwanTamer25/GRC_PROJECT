@@ -64,27 +64,29 @@ async function callOllama(prompt, options = {}) {
  * @returns {Promise<string>} - AI-generated executive summary
  */
 export async function generateExecutiveSummary(profile, maturityScore) {
-    const prompt = `You are an elite Virtual CISO consulting for a client. Your job is to output a Board-Level Executive Summary of their security posture.
+    const prompt = `You are a Virtual CISO advising the Board of Directors. 
+    Review the following client profile and security posture.
+    
+    CLIENT PROFILE:
+    - Name: ${profile.name}
+    - Industry: ${profile.industry} (${profile.employees} employees)
+    - Critical Assets: ${profile.dataTypes.join(', ') || 'Business Data'}
+    
+    SECURITY POSTURE:
+    - Overall Maturity Score: ${maturityScore.overall}% (Industry Avg: ~65%)
+    - Governance Score: ${maturityScore.governance}%
+    - Technical Score: ${maturityScore.technical}%
+    - Critical Gaps: ${profile.mfa !== 'mandatory' ? 'No Mandatory MFA' : ''}, ${profile.backupFrequency === 'none' ? 'No Disaster Recovery' : ''}
 
-CLIENT PROFILE:
-- Name: ${profile.name}
-- Industry: ${profile.industry} (${profile.employees} employees, ${profile.region})
-- Operations: ${profile.model} model, Cloud: ${profile.hosting}
-- Key Assets: ${profile.dataTypes.join(', ') || 'Standard Business Data'}
-- Security Budget: $${profile.securityBudget}/year
+    INSTRUCTIONS:
+    Write a "Bottom Line Up Front" (BLUF) Executive Summary (approx 300 words).
+    
+    Structure:
+    1.  **Strategic Risk Assessment**: Start with a direct statement on their risk exposure (e.g., "Critical Exposure", "Moderate Risk"). Connect it to their industry (${profile.industry}).
+    2.  **Financial & Operational Impact**: Explain the *business impact* of their top gaps. Use terms like "Revenue Risk", "Operational Downtime", "Regulatory Fines". Avoid purely technical jargon.
+    3.  **Forward-Looking Guidance**: Recommend a strategic focus for the next 12 months (e.g., "Shift focus from prevention to resilience").
 
-SECURITY POSTURE SNAPSHOT:
-- Maturity Score: ${maturityScore.overall}% (Industry Avg: ~65%)
-- Critical Gaps: ${profile.mfa !== 'mandatory' ? 'Lack of Mandatory MFA' : ''}, ${profile.backupFrequency === 'none' ? 'No Offline Backups' : ''}, ${profile.vulnerabilityScanning === 'never' ? 'No Vuln Scanning' : ''}
-- Compliance Needs: ${profile.regulatoryRequirements?.join(', ') || 'Standard Data Protection'}
-
-INSTRUCTIONS:
-Write a **Strategic Executive Summary** (3-4 paragraphs) addressed to the Board of Directors.
-1.  **Strategic Outlook**: Open with a high-level assessment of their risk posture relative to the ${profile.industry} industry threats.
-2.  **Critical Risk Exposure**: Explicitly mention the top 1-2 existential risks (e.g., Ransomware due to no backups, Data Breach due to weak auth). Use financial risk language.
-3.  **Forward-Looking Strategy**: Briefly justify the need for immediate investment in the top recommendations to protect revenue and reputation.
-
-TONE: Professional, Authoritative, Concise, Business-Aligned. Avoid generic fluff. Use strong verbs.`;
+    TONE: Authoritative, Concise, Board-Ready. No fluff.`;
 
     return await callOllama(prompt, { temperature: 0.6, max_tokens: 1000 });
 }
@@ -97,48 +99,45 @@ TONE: Professional, Authoritative, Concise, Business-Aligned. Avoid generic fluf
  * @returns {Promise<object>} - AI-generated recommendations in JSON format
  */
 export async function generateRecommendations(profile, gaps, maturityScore) {
-    const gapsSummary = gaps.map(g => `- ${g.category}: ${g.description} (Severity: ${g.severity})`).join('\n');
+    const gapsSummary = gaps.map(g => `- [${g.category}] ${g.description} (Severity: ${g.severity})`).join('\n');
 
-    const prompt = `You are a Technical Security Architect. Generate 15 precise, actionable recommendations for this client.
+    const prompt = `You are a Lead Security Architect.
+    Generate 12 highly specific, technical recommendations based on these gaps.
 
-CLIENT: ${profile.name} (${profile.industry}, ${profile.employees} employees)
-BUDGET: $${profile.securityBudget}/year
-MATURITY: ${maturityScore.overall}%
+    CLIENT CONTEXT:
+    - Industry: ${profile.industry}
+    - Size: ${profile.employees}
+    - Budget: Simple/Limited if <50 employees, Enterprise if >500.
 
-IDENTIFIED GAPS & RISKS:
-${gapsSummary}
+    IDENTIFIED GAPS:
+    ${gapsSummary}
 
-CRITICAL INSTRUCTIONS:
-For EACH recommendation, you MUST provide precise technical details.
-- Avoid generic advice like "Implement a tool."
-- Instead, say "Deploy CrowdStrike Falcon or SentinelOne" or "Configure AWS CloudTrail with log validation."
-- Provide a "Technical Configuration" step (e.g., "Run 'npm audit' in CI/CD").
-
-OUTPUT FORMAT (JSON ONLY):
-{
-  "recommendations": [
+    INSTRUCTIONS:
+    Output strictly valid JSON.
+    For each recommendation:
+    1.  **Title**: Use specific architectural patterns (e.g., "Implement ZTNA", "Deploy SASE", "Enable DLP").
+    2.  **Steps**: Provide 3 granular steps. Step 1 must be a specific configuration or tool selection.
+    3.  **Impact**: Explain the financial/security benefit.
+    
+    JSON STRUCTURE:
     {
-      "id": number,
-      "title": "Action-Oriented Title",
-      "category": "Management" | "Operational" | "Technical",
-      "priority": "Critical" | "High" | "Medium" | "Low",
-      "businessImpact": "One sentence on WHY this matters financially/operationally.",
-      "steps": ["Step 1: Specific action...", "Step 2: Config/Install...", "Step 3: Validation..."],
-      "estimatedCost": {"min": number, "max": number},
-      "timeline": "e.g., 2 weeks",
-      "resources": {"people": "Roles needed", "tools": "Specific tools/licenses"},
-      "successMetrics": ["Metric 1", "Metric 2"],
-      "quickWins": ["Immediate action 1"]
-    }
-  ]
-}
-
-Prioritize the Critical gaps first. Ensure the "steps" are technical and granular.`;
+      "recommendations": [
+        {
+          "title": "Short Actionable Title",
+          "category": "Technical" | "Governance" | "Operational",
+          "priority": "Critical" | "High" | "Medium",
+          "businessImpact": "Why this matters to the business",
+          "steps": ["Step 1", "Step 2", "Step 3"],
+          "difficulty": "Low" | "Medium" | "High",
+          "estimatedCost": { "min": number, "max": number }
+        }
+      ]
+    }`;
 
     try {
         const response = await callOllama(prompt, {
             temperature: 0.4,
-            max_tokens: 6000
+            max_tokens: 4000
         });
 
         // Parse JSON response
@@ -159,41 +158,32 @@ Prioritize the Critical gaps first. Ensure the "steps" are technical and granula
  * @returns {Promise<string>} - AI-generated compliance roadmap in markdown
  */
 export async function generateComplianceRoadmap(profile) {
-    const prompt = `You are a compliance consultant. Generate a detailed compliance roadmap for this company.
+    const prompt = `You are a Senior GRC Consultant.
+    Create a Compliance Roadmap for a ${profile.industry} company in ${profile.region}.
+    
+    DATA PROFILE:
+    - Types: ${profile.dataTypes.join(', ')}
+    - Existing: ${profile.complianceFrameworks?.join(', ') || 'None'}
 
-COMPANY:
-- Industry: ${profile.industry}
-- Region: ${profile.region}
-- Size: ${profile.employees} employees
-- Data Types: ${profile.dataTypes.join(', ')}
-- Existing Certifications: ${profile.existingCertifications?.join(', ') || 'None'}
-- Regulatory Requirements: ${profile.regulatoryRequirements?.join(', ') || 'Not specified'}
+    INSTRUCTIONS:
+    Output Markdown formatted text.
+    
+    Section 1: **Mandatory Regulatory Requirements**
+    - List laws/regulations that legitimately apply (e.g., GDPR, HIPAA, PCI-DSS).
+    - For each, state the "Must-Do" immediate action.
+    
+    Section 2: **Strategic Frameworks (Competitive Advantage)**
+    - Recommend frameworks like SOC 2 or ISO 27001 only if they add business value (sales enablement).
+    
+    Section 3: **12-Month Timeline**
+    - Q1: Immediate Fixes
+    - Q2: Audit Prep
+    - Q3: Certification
+    - Q4: Maintenance
+    
+    Force "Must Have" vs "Nice to Have" distinction.`;
 
-Generate a compliance roadmap covering:
-
-1. REQUIRED Regulations (mandatory for their industry/region):
-   - List each regulation (GDPR, HIPAA, PCI-DSS, SOC 2, ISO 27001, etc.)
-   - Why it applies to them
-   - Current gap assessment
-   - Timeline to achieve (realistic months)
-   - Estimated cost range
-   - Business benefits
-
-2. RECOMMENDED Frameworks (industry best practice):
-   - Similar format as above
-   - Focus on competitive advantage
-
-3. Prioritized Action Plan:
-   - Month-by-month roadmap for next 12 months
-   - Quick wins (0-3 months)
-   - Medium-term goals (3-9 months)
-   - Long-term goals (9-12 months)
-
-Be specific to their ${profile.industry} industry and ${profile.region} region. Include actual regulation names and specific requirements.
-
-Format as clear markdown with headers, lists, and tables where appropriate.`;
-
-    return await callOllama(prompt, { temperature: 0.6, max_tokens: 3000 });
+    return await callOllama(prompt, { temperature: 0.5, max_tokens: 2000 });
 }
 
 /**
@@ -203,43 +193,28 @@ Format as clear markdown with headers, lists, and tables where appropriate.`;
  * @returns {Promise<array>} - Risks with financial quantification
  */
 export async function quantifyRisks(profile, risks) {
-    const risksDescription = risks.map(r => `- ${r.risk}: ${r.impact} impact, ${r.likelihood} likelihood`).join('\n');
+    const riskList = risks.map(r => r.risk).join(', ');
 
-    const prompt = `You are a Quantitative Risk Analyst (OpenFAIR methodology). Calculate financial risk exposure.
+    const prompt = `You are an OpenFAIR Risk Analyst.
+    Calculate Annual Loss Expectancy (ALE) for these risks: ${riskList}.
+    
+    CONTEXT:
+    - Company Revenue: ~$${(profile.employees * 150000).toLocaleString()}
+    - Industry: ${profile.industry}
+    
+    INSTRUCTIONS:
+    Return JSON array.
+    For each risk, estimate:
+    - SLE: Single Loss Expectancy (reasonable worst case).
+    - ARO: Annual Rate of Occurrence (probability 0.0-1.0).
+    - ALE: SLE * ARO.
+    - MitigationCost: Est. cost to fix.
+    - ROI: Return on Investment %.
 
-CONTEXT:
-- Company Size: ${profile.employees} employees
-- Est. Revenue: $${(profile.employees * 200000).toLocaleString()} (approx)
-- Industry: ${profile.industry}
-- Data Sensitivity: ${profile.dataTypes.join(', ')}
-
-RISK SCENARIOS TO QUANTIFY:
-${risksDescription}
-
-INSTRUCTIONS:
-Estimate reasonable financial loss values (ALE) for EACH risk.
-- **SLE (Single Loss Expectancy)**: Total cost of one event (Response + Downtime + Fines + Reputation).
-- **ARO (Annual Rate of Occurrence)**: Probability of event per year (e.g., 0.1 for once in 10 years, 1.0 for once a year).
-- **ALE**: SLE * ARO.
-- **ROI**: ((ALE - MitigationCost) / MitigationCost) * 100.
-
-BENCHMARKS (Guide only):
-- Ransomware: $500k - $2M range for mid-size.
-- Data Breach: $150 per record.
-- DDoS: $10k - $50k per hour downtime.
-
-OUTPUT FORMAT (JSON ONLY):
-[
-  {
-    "risk": "Exact Risk Name from list",
-    "sle": number (USD),
-    "aro": number (0.01 - 3.0),
-    "ale": number (USD),
-    "mitigationCost": number (USD),
-    "roi": number (percentage)
-  }
-]
-`;
+    JSON:
+    [
+        { "risk": "Name", "sle": 10000, "aro": 0.5, "ale": 5000, "mitigationCost": 1000, "roi": 400 }
+    ]`;
 
     try {
         const response = await callOllama(prompt, {
@@ -263,7 +238,7 @@ export async function checkOllamaStatus() {
         if (!response.ok) return false;
 
         const data = await response.json();
-        const hasModel = data.models?.some(m => m.name.includes('llama3.3'));
+        const hasModel = data.models?.some(m => m.name.includes('llama3.3') || m.name.includes('llama3'));
         return hasModel;
     } catch (error) {
         return false;
